@@ -19,7 +19,7 @@ const (
 	BarcodeFormatEAN13
 	BarcodeFormatEAN8
 	BarcodeFormatCode39
-	BarcodeFormatCode128
+	BarcodeFormatCode128 = iota + 67
 )
 
 const (

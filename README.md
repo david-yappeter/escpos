@@ -12,7 +12,7 @@ point-of-sale (POS) system.
 
 Install the package via the following:
 
-    go get -u github.com/knq/escpos
+    go get -u github.com/david-yappeter/escpos
 
 ## Example epos-server ##
 
@@ -32,7 +32,7 @@ import (
     "bufio"
     "os"
 
-    "github.com/knq/escpos"
+    "github.com/david-yappeter/escpos"
 )
 
 func main() {

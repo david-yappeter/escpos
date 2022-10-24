@@ -476,20 +476,20 @@ func (e *Escpos) FeedAndCut(params map[string]string) {
 
 // Barcode sends a barcode to the printer.
 func (e *Escpos) Barcode(barcode string, format BarcodeFormat) {
-	code := ""
+	var code byte
 	switch format {
 	case BarcodeFormatUPC_A:
-		code = "\x00"
+		code = 0x00
 	case BarcodeFormatUPC_E:
-		code = "\x01"
+		code = 0x01
 	case BarcodeFormatEAN13:
-		code = "\x02"
+		code = 0x02
 	case BarcodeFormatEAN8:
-		code = "\x03"
+		code = 0x03
 	case BarcodeFormatCode39:
-		code = "\x04"
+		code = 0x04
 	case BarcodeFormatCode128:
-		code = "\x49"
+		code = 0x49
 	}
 
 	// reset settings
@@ -500,9 +500,9 @@ func (e *Escpos) Barcode(barcode string, format BarcodeFormat) {
 
 	// write barcode
 	if format > 69 {
-		e.Write(string(append([]byte{GS, '(', 'k', byte(len(barcode))}, []byte(barcode)...)))
+		e.Write(string(append([]byte{GS, '(', 'k', code, byte(len(barcode))}, []byte(barcode)...)))
 	} else if format < 69 {
-		e.Write(fmt.Sprintf("\x1dk"+code+"%v\x00", barcode))
+		e.Write(string(append(append([]byte{GS, '(', 'k', code}, []byte(barcode)...), 0x00)))
 	}
 	// e.Write(fmt.Sprintf("%v", barcode))
 }

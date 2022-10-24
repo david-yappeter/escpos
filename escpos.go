@@ -500,9 +500,9 @@ func (e *Escpos) Barcode(barcode string, format BarcodeFormat) {
 
 	// write barcode
 	if format > 69 {
-		e.Write(string(append([]byte{GS, '(', 'k', code, byte(len(barcode))}, []byte(barcode)...)))
+		e.Write(string(append([]byte{GS, 'k', code, byte(len(barcode))}, []byte(barcode)...)))
 	} else if format < 69 {
-		e.Write(string(append(append([]byte{GS, '(', 'k', code}, []byte(barcode)...), 0x00)))
+		e.Write(string(append(append([]byte{GS, 'k', code}, []byte(barcode)...), 0x00)))
 	}
 	// e.Write(fmt.Sprintf("%v", barcode))
 }

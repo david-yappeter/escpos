@@ -5,8 +5,28 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"strconv"
 	"strings"
+)
+
+type BarcodeFormat int
+type QRCodeErrorCorrectionLevel uint8
+
+const (
+	BarcodeFormatUPC_A BarcodeFormat = iota
+	BarcodeFormatUPC_E
+	BarcodeFormatEAN13
+	BarcodeFormatEAN8
+	BarcodeFormatCode39
+	BarcodeFormatCode128
+)
+
+const (
+	QRCodeErrorCorrectionLevelL QRCodeErrorCorrectionLevel = iota + 48
+	QRCodeErrorCorrectionLevelM
+	QRCodeErrorCorrectionLevelQ
+	QRCodeErrorCorrectionLevelH
 )
 
 const (
@@ -455,20 +475,20 @@ func (e *Escpos) FeedAndCut(params map[string]string) {
 }
 
 // Barcode sends a barcode to the printer.
-func (e *Escpos) Barcode(barcode string, format int) {
+func (e *Escpos) Barcode(barcode string, format BarcodeFormat) {
 	code := ""
 	switch format {
-	case 0:
+	case BarcodeFormatUPC_A:
 		code = "\x00"
-	case 1:
+	case BarcodeFormatUPC_E:
 		code = "\x01"
-	case 2:
+	case BarcodeFormatEAN13:
 		code = "\x02"
-	case 3:
+	case BarcodeFormatEAN8:
 		code = "\x03"
-	case 4:
+	case BarcodeFormatCode39:
 		code = "\x04"
-	case 73:
+	case BarcodeFormatCode128:
 		code = "\x49"
 	}
 
@@ -480,11 +500,74 @@ func (e *Escpos) Barcode(barcode string, format int) {
 
 	// write barcode
 	if format > 69 {
-		e.Write(fmt.Sprintf("\x1dk"+code+"%v%v", len(barcode), barcode))
+		e.Write(string(append([]byte{GS, '(', 'k', byte(len(barcode))}, []byte(barcode)...)))
 	} else if format < 69 {
 		e.Write(fmt.Sprintf("\x1dk"+code+"%v\x00", barcode))
 	}
-	e.Write(fmt.Sprintf("%v", barcode))
+	// e.Write(fmt.Sprintf("%v", barcode))
+}
+
+func (e *Escpos) QRCode(code string, model bool, size uint8, correctionLevel QRCodeErrorCorrectionLevel) (int, error) {
+	if len(code) > 7089 {
+		return 0, fmt.Errorf("the code is too long, it's length should be smaller than 7090")
+	}
+	if size < 1 {
+		size = 1
+	}
+	if size > 16 {
+		size = 16
+	}
+	var m byte = 49
+	var err error
+	// set the qr code model
+	if model {
+		m = 50
+	}
+	_, err = e.WriteRaw([]byte{GS, '(', 'k', 4, 0, 49, 65, m, 0})
+	if err != nil {
+		return 0, err
+	}
+
+	// set the qr code size
+	_, err = e.WriteRaw([]byte{GS, '(', 'k', 3, 0, 49, 67, size})
+	if err != nil {
+		return 0, err
+	}
+
+	// set the qr code error correction level
+	if correctionLevel < 48 {
+		correctionLevel = 48
+	}
+	if correctionLevel > 51 {
+		correctionLevel = 51
+	}
+	_, err = e.WriteRaw([]byte{GS, '(', 'k', 3, 0, 49, 69, size})
+	if err != nil {
+		return 0, err
+	}
+
+	// store the data in the buffer
+	// we now write stuff to the printer, so lets save it for returning
+
+	// pL and pH define the size of the data. Data ranges from 1 to (pL + pH*256)-3
+	// 3 < pL + pH*256 < 7093
+	var codeLength = len(code) + 3
+	var pL, pH byte
+	pH = byte(int(math.Floor(float64(codeLength) / 256)))
+	pL = byte(codeLength - 256*int(pH))
+
+	written, err := e.WriteRaw(append([]byte{GS, '(', 'k', pL, pH, 49, 80, 48}, []byte(code)...))
+	if err != nil {
+		return written, err
+	}
+
+	// finally print the buffer
+	_, err = e.WriteRaw([]byte{GS, '(', 'k', 3, 0, 49, 81, 48})
+	if err != nil {
+		return written, err
+	}
+
+	return written, nil
 }
 
 // used to send graphics headers

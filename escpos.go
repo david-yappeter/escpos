@@ -1,13 +1,15 @@
 package escpos
 
 import (
-	"encoding/base64"
 	"fmt"
+	"image"
 	"io"
 	"log"
 	"math"
 	"strconv"
 	"strings"
+
+	raster "github.com/david-yappeter/escpos/raster"
 )
 
 type BarcodeFormat int
@@ -126,6 +128,14 @@ func (e *Escpos) ReadRaw(data []byte) (n int, err error) {
 // write a string to the printer
 func (e *Escpos) Write(data string) (int, error) {
 	return e.WriteRaw([]byte(data))
+}
+
+// write a string to the printer
+func (e *Escpos) WriteLn(data string) (int, error) {
+	sz, err := e.WriteRaw([]byte(data))
+	e.Linefeed()
+	return sz, err
+
 }
 
 // init/reset printer settings
@@ -571,72 +581,77 @@ func (e *Escpos) QRCode(code string, model bool, size uint8, correctionLevel QRC
 }
 
 // used to send graphics headers
-func (e *Escpos) gSend(m byte, fn byte, data []byte) {
-	l := len(data) + 2
+// func (e *Escpos) gSend(m byte, fn byte, data []byte) {
+// 	l := len(data) + 2
 
-	e.Write("\x1b(L")
-	e.WriteRaw([]byte{byte(l % 256), byte(l / 256), m, fn})
-	e.WriteRaw(data)
-}
+// 	e.Write("\x1b(L")
+// 	e.WriteRaw([]byte{byte(l % 256), byte(l / 256), m, fn})
+// 	e.WriteRaw(data)
+// }
 
 // write an image
-func (e *Escpos) Image(params map[string]string, data string) {
-	// send alignment to printer
-	if align, ok := params["align"]; ok {
-		e.SetAlign(align)
-	}
+// func (e *Escpos) Image(params map[string]string, data string) {
+// 	// send alignment to printer
+// 	if align, ok := params["align"]; ok {
+// 		e.SetAlign(align)
+// 	}
 
-	// get width
-	wstr, ok := params["width"]
-	if !ok {
-		log.Fatal("No width specified on image")
-	}
+// 	// get width
+// 	wstr, ok := params["width"]
+// 	if !ok {
+// 		log.Fatal("No width specified on image")
+// 	}
 
-	// get height
-	hstr, ok := params["height"]
-	if !ok {
-		log.Fatal("No height specified on image")
-	}
+// 	// get height
+// 	hstr, ok := params["height"]
+// 	if !ok {
+// 		log.Fatal("No height specified on image")
+// 	}
 
-	// convert width
-	width, err := strconv.Atoi(wstr)
-	if err != nil {
-		log.Fatalf("Invalid image width %s", wstr)
-	}
+// 	// convert width
+// 	width, err := strconv.Atoi(wstr)
+// 	if err != nil {
+// 		log.Fatalf("Invalid image width %s", wstr)
+// 	}
 
-	// convert height
-	height, err := strconv.Atoi(hstr)
-	if err != nil {
-		log.Fatalf("Invalid image height %s", hstr)
-	}
+// 	// convert height
+// 	height, err := strconv.Atoi(hstr)
+// 	if err != nil {
+// 		log.Fatalf("Invalid image height %s", hstr)
+// 	}
 
-	// decode data frome b64 string
-	dec, err := base64.StdEncoding.DecodeString(data)
-	if err != nil {
-		log.Fatal(err)
-	}
+// 	// decode data frome b64 string
+// 	dec, err := base64.StdEncoding.DecodeString(data)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	log.Printf("Image len:%d w: %d h: %d\n", len(dec), width, height)
+// 	log.Printf("Image len:%d w: %d h: %d\n", len(dec), width, height)
 
-	// $imgHeader = self::dataHeader(array($img -> getWidth(), $img -> getHeight()), true);
-	// $tone = '0';
-	// $colors = '1';
-	// $xm = (($size & self::IMG_DOUBLE_WIDTH) == self::IMG_DOUBLE_WIDTH) ? chr(2) : chr(1);
-	// $ym = (($size & self::IMG_DOUBLE_HEIGHT) == self::IMG_DOUBLE_HEIGHT) ? chr(2) : chr(1);
-	//
-	// $header = $tone . $xm . $ym . $colors . $imgHeader;
-	// $this -> graphicsSendData('0', 'p', $header . $img -> toRasterFormat());
-	// $this -> graphicsSendData('0', '2');
+// 	// $imgHeader = self::dataHeader(array($img -> getWidth(), $img -> getHeight()), true);
+// 	// $tone = '0';
+// 	// $colors = '1';
+// 	// $xm = (($size & self::IMG_DOUBLE_WIDTH) == self::IMG_DOUBLE_WIDTH) ? chr(2) : chr(1);
+// 	// $ym = (($size & self::IMG_DOUBLE_HEIGHT) == self::IMG_DOUBLE_HEIGHT) ? chr(2) : chr(1);
+// 	//
+// 	// $header = $tone . $xm . $ym . $colors . $imgHeader;
+// 	// $this -> graphicsSendData('0', 'p', $header . $img -> toRasterFormat());
+// 	// $this -> graphicsSendData('0', '2');
 
-	header := []byte{
-		byte('0'), 0x01, 0x01, byte('1'),
-	}
+// 	header := []byte{
+// 		byte('0'), 0x01, 0x01, byte('1'),
+// 	}
 
-	a := append(header, dec...)
+// 	a := append(header, dec...)
 
-	e.gSend(byte('0'), byte('p'), a)
-	e.gSend(byte('0'), byte('2'), []byte{})
+// 	e.gSend(byte('0'), byte('p'), a)
+// 	e.gSend(byte('0'), byte('2'), []byte{})
 
+// }
+
+func (e *Escpos) Image(img image.Image) {
+	xL, xH, yL, yH, data := raster.PrintImage(img)
+	e.WriteRaw(append([]byte{GS, 'v', 48, 0, xL, xH, yL, yH}, data...))
 }
 
 // write a "node" to the printer
@@ -660,8 +675,6 @@ func (e *Escpos) WriteNode(name string, params map[string]string, data string) {
 		e.FeedAndCut(params)
 	case "pulse":
 		e.Pulse()
-	case "image":
-		e.Image(params, data)
 	}
 }
 

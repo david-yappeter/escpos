@@ -71,6 +71,9 @@ func textReplace(data string) string {
 }
 
 type Escpos struct {
+	// stored
+	stored []byte
+
 	// destination
 	dst io.ReadWriter
 
@@ -85,6 +88,10 @@ type Escpos struct {
 
 	// state toggles GS[char]
 	reverse, smooth uint8
+}
+
+func (e Escpos) Stored() []byte {
+	return e.stored
 }
 
 // reset toggles
@@ -111,6 +118,7 @@ func New(dst io.ReadWriter) (e *Escpos) {
 // write raw bytes to printer
 func (e *Escpos) WriteRaw(data []byte) (n int, err error) {
 	if len(data) > 0 {
+		e.stored = append(e.stored, data...)
 		log.Printf("Writing %d bytes\n", len(data))
 		e.dst.Write(data)
 	} else {

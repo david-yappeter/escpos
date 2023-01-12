@@ -106,10 +106,25 @@ func getPixelValue(x int, y int, pixels *[][]pixel) int {
 	row := (*pixels)[y]
 	pixel := row[x]
 
+	// white
 	if pixel.R > 0 {
 		return 0
 	}
 
+	// black
+	return 1
+}
+
+func getPixelValueReverse(x int, y int, pixels *[][]pixel) int {
+	row := (*pixels)[x]
+	pixel := row[y]
+
+	// white
+	if pixel.R > 0 {
+		return 0
+	}
+
+	// black
 	return 1
 }
 
@@ -139,4 +154,32 @@ func getPixels(img image.Image) (int, int, [][]pixel) {
 	}
 
 	return width, height, pixels
+}
+
+func PrintRasterImageProcess(img image.Image) (nL int, nH int, data []byte) {
+	width, height, pixels := getPixels(img)
+
+	removeTransparency(&pixels)
+	makeGrayscale(&pixels)
+	printWidth := closestNDivisibleBy8(width)
+	printHeight := closestNDivisibleBy8(height)
+
+	// bytes, _ := rasterize(printWidth, printHeight, &pixels)
+
+	ans := []byte{}
+	for i := 0; i < printHeight/8; i++ {
+		for j := 0; j < printWidth; j++ {
+			ans = append(ans, byte(
+				(getPixelValueReverse((i*8), j, &pixels)<<7)|
+					(getPixelValueReverse((i*8)+1, j, &pixels)<<6)|
+					(getPixelValueReverse((i*8)+2, j, &pixels)<<5)|
+					(getPixelValueReverse((i*8)+3, j, &pixels)<<4)|
+					(getPixelValueReverse((i*8)+4, j, &pixels)<<3)|
+					(getPixelValueReverse((i*8)+5, j, &pixels)<<2)|
+					(getPixelValueReverse((i*8)+6, j, &pixels)<<1)|
+					(getPixelValueReverse((i*8)+7, j, &pixels)),
+			))
+		}
+	}
+	return printWidth, printHeight, ans
 }

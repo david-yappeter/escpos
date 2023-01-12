@@ -94,6 +94,10 @@ func (e Escpos) Stored() []byte {
 	return e.stored
 }
 
+func (e *Escpos) ClearStored() {
+	e.stored = []byte{}
+}
+
 // reset toggles
 func (e *Escpos) reset() {
 	e.width = 1
@@ -119,7 +123,7 @@ func New(dst io.ReadWriter) (e *Escpos) {
 func (e *Escpos) WriteRaw(data []byte) (n int, err error) {
 	if len(data) > 0 {
 		e.stored = append(e.stored, data...)
-		log.Printf("Writing %d bytes\n", len(data))
+		// log.Printf("Writing %d bytes\n", len(data))
 		e.dst.Write(data)
 	} else {
 		log.Printf("Wrote NO bytes\n")
@@ -143,7 +147,23 @@ func (e *Escpos) WriteLn(data string) (int, error) {
 	sz, err := e.WriteRaw([]byte(data))
 	e.Linefeed()
 	return sz, err
+}
 
+func (e *Escpos) PrintRasterImage(img image.Image, incrementation int, xL, xH, yL, yH, dxL, dxH, dyL, dyH byte) {
+	var ESC byte = 0x1b
+	printWidth, printHeight, data := raster.PrintRasterImageProcess(img)
+
+	var yPos byte = yL
+	var yPosH byte = yH
+	for i := 0; i < printHeight/8; i++ {
+		e.WriteRaw([]byte{ESC, 87, xL, xH, yPos, yPosH, dxL, dxH, dyL, dyH})
+		e.WriteRaw(append([]byte{ESC, 42, 0, byte(printWidth), byte(printWidth / 256)}, data[i*printWidth:((i+1)*printWidth)]...))
+
+		if int(yPos)+incrementation > 255 {
+			yPosH += byte(int(yPos) + incrementation)
+		}
+		yPos = byte(int(yPos) + incrementation)
+	}
 }
 
 // init/reset printer settings
@@ -587,75 +607,6 @@ func (e *Escpos) QRCode(code string, model bool, size uint8, correctionLevel QRC
 
 	return written, nil
 }
-
-// used to send graphics headers
-// func (e *Escpos) gSend(m byte, fn byte, data []byte) {
-// 	l := len(data) + 2
-
-// 	e.Write("\x1b(L")
-// 	e.WriteRaw([]byte{byte(l % 256), byte(l / 256), m, fn})
-// 	e.WriteRaw(data)
-// }
-
-// write an image
-// func (e *Escpos) Image(params map[string]string, data string) {
-// 	// send alignment to printer
-// 	if align, ok := params["align"]; ok {
-// 		e.SetAlign(align)
-// 	}
-
-// 	// get width
-// 	wstr, ok := params["width"]
-// 	if !ok {
-// 		log.Fatal("No width specified on image")
-// 	}
-
-// 	// get height
-// 	hstr, ok := params["height"]
-// 	if !ok {
-// 		log.Fatal("No height specified on image")
-// 	}
-
-// 	// convert width
-// 	width, err := strconv.Atoi(wstr)
-// 	if err != nil {
-// 		log.Fatalf("Invalid image width %s", wstr)
-// 	}
-
-// 	// convert height
-// 	height, err := strconv.Atoi(hstr)
-// 	if err != nil {
-// 		log.Fatalf("Invalid image height %s", hstr)
-// 	}
-
-// 	// decode data frome b64 string
-// 	dec, err := base64.StdEncoding.DecodeString(data)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	log.Printf("Image len:%d w: %d h: %d\n", len(dec), width, height)
-
-// 	// $imgHeader = self::dataHeader(array($img -> getWidth(), $img -> getHeight()), true);
-// 	// $tone = '0';
-// 	// $colors = '1';
-// 	// $xm = (($size & self::IMG_DOUBLE_WIDTH) == self::IMG_DOUBLE_WIDTH) ? chr(2) : chr(1);
-// 	// $ym = (($size & self::IMG_DOUBLE_HEIGHT) == self::IMG_DOUBLE_HEIGHT) ? chr(2) : chr(1);
-// 	//
-// 	// $header = $tone . $xm . $ym . $colors . $imgHeader;
-// 	// $this -> graphicsSendData('0', 'p', $header . $img -> toRasterFormat());
-// 	// $this -> graphicsSendData('0', '2');
-
-// 	header := []byte{
-// 		byte('0'), 0x01, 0x01, byte('1'),
-// 	}
-
-// 	a := append(header, dec...)
-
-// 	e.gSend(byte('0'), byte('p'), a)
-// 	e.gSend(byte('0'), byte('2'), []byte{})
-
-// }
 
 func (e *Escpos) Image(img image.Image) {
 	xL, xH, yL, yH, data := raster.PrintImage(img)

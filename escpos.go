@@ -155,9 +155,9 @@ func (e *Escpos) PrintRasterImage(img image.Image, incrementation int, xL, xH, y
 
 	var yPos byte = yL
 	var yPosH byte = yH
-	for i := 0; i < printHeight/8; i++ {
+	for i := 0; i < printHeight/8/3; i++ {
 		e.WriteRaw([]byte{ESC, 87, xL, xH, yPos, yPosH, dxL, dxH, dyL, dyH})
-		e.WriteRaw(append([]byte{ESC, 42, 0, byte(printWidth), byte(printWidth / 256)}, data[i*printWidth:((i+1)*printWidth)]...))
+		e.WriteRaw(append([]byte{ESC, 42, 33, byte(printWidth), byte(printWidth / 256)}, data[i*printWidth*3:((i+1)*printWidth*3)]...))
 
 		if int(yPos)+incrementation > 255 {
 			yPosH += byte(int(yPos) + incrementation)

@@ -12,6 +12,13 @@ func closestNDivisibleBy8(n int) int {
 	return n1
 }
 
+func closestNDivisibleBy24(n int) int {
+	q := n / 24
+	n1 := q * 24
+
+	return n1
+}
+
 func PrintImage(img image.Image) (xL byte, xH byte, yL byte, yH byte, data []byte) {
 	width, height, pixels := getPixels(img)
 
@@ -162,22 +169,41 @@ func PrintRasterImageProcess(img image.Image) (nL int, nH int, data []byte) {
 	removeTransparency(&pixels)
 	makeGrayscale(&pixels)
 	printWidth := closestNDivisibleBy8(width)
-	printHeight := closestNDivisibleBy8(height)
-
-	// bytes, _ := rasterize(printWidth, printHeight, &pixels)
+	printHeight := closestNDivisibleBy24(height)
 
 	ans := []byte{}
-	for i := 0; i < printHeight/8; i++ {
+
+	for i := 0; i < printHeight/8/3; i++ {
 		for j := 0; j < printWidth; j++ {
 			ans = append(ans, byte(
-				(getPixelValueReverse((i*8), j, &pixels)<<7)|
-					(getPixelValueReverse((i*8)+1, j, &pixels)<<6)|
-					(getPixelValueReverse((i*8)+2, j, &pixels)<<5)|
-					(getPixelValueReverse((i*8)+3, j, &pixels)<<4)|
-					(getPixelValueReverse((i*8)+4, j, &pixels)<<3)|
-					(getPixelValueReverse((i*8)+5, j, &pixels)<<2)|
-					(getPixelValueReverse((i*8)+6, j, &pixels)<<1)|
-					(getPixelValueReverse((i*8)+7, j, &pixels)),
+				(getPixelValueReverse((i*24), j, &pixels)<<7)|
+					(getPixelValueReverse((i*24)+1, j, &pixels)<<6)|
+					(getPixelValueReverse((i*24)+2, j, &pixels)<<5)|
+					(getPixelValueReverse((i*24)+3, j, &pixels)<<4)|
+					(getPixelValueReverse((i*24)+4, j, &pixels)<<3)|
+					(getPixelValueReverse((i*24)+5, j, &pixels)<<2)|
+					(getPixelValueReverse((i*24)+6, j, &pixels)<<1)|
+					(getPixelValueReverse((i*24)+7, j, &pixels)),
+			))
+			ans = append(ans, byte(
+				(getPixelValueReverse((i*24)+8, j, &pixels)<<7)|
+					(getPixelValueReverse((i*24)+1+8, j, &pixels)<<6)|
+					(getPixelValueReverse((i*24)+2+8, j, &pixels)<<5)|
+					(getPixelValueReverse((i*24)+3+8, j, &pixels)<<4)|
+					(getPixelValueReverse((i*24)+4+8, j, &pixels)<<3)|
+					(getPixelValueReverse((i*24)+5+8, j, &pixels)<<2)|
+					(getPixelValueReverse((i*24)+6+8, j, &pixels)<<1)|
+					(getPixelValueReverse((i*24)+7+8, j, &pixels)),
+			))
+			ans = append(ans, byte(
+				(getPixelValueReverse((i*24)+16, j, &pixels)<<7)|
+					(getPixelValueReverse((i*24)+1+16, j, &pixels)<<6)|
+					(getPixelValueReverse((i*24)+2+16, j, &pixels)<<5)|
+					(getPixelValueReverse((i*24)+3+16, j, &pixels)<<4)|
+					(getPixelValueReverse((i*24)+4+16, j, &pixels)<<3)|
+					(getPixelValueReverse((i*24)+5+16, j, &pixels)<<2)|
+					(getPixelValueReverse((i*24)+6+16, j, &pixels)<<1)|
+					(getPixelValueReverse((i*24)+7+16, j, &pixels)),
 			))
 		}
 	}

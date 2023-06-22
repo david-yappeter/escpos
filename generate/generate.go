@@ -250,3 +250,7 @@ func SetPrintDirection(direction uint8) []byte {
 func PrintPageModeBufferData() []byte {
 	return []byte{esc, 12}
 }
+
+func SetAbsolutePosition(v int) []byte {
+	return []byte{esc, 36, byte(v % 256), byte(v / 256)}
+}

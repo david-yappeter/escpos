@@ -70,6 +70,14 @@ func SetFont(font string) []byte {
 	return []byte(fmt.Sprintf("\x1BM%c", f))
 }
 
+func SetFontSize(width, height uint8) []byte {
+	if !(width > 0 && height > 0 && width <= 8 && height <= 8) {
+		width = 1
+		height = 1
+	}
+	return []byte(fmt.Sprintf("\x1D!%c", ((width-1)<<4)|(height-1)))
+}
+
 func SetUnderline(v uint8) []byte {
 	return []byte(fmt.Sprintf("\x1B-%c", v))
 }
@@ -192,6 +200,10 @@ func QRCode(code string, model bool, size uint8, correctionLevel escpos.QRCodeEr
 	return datas, nil
 }
 
+func SetMarginLeft(marginLeft int) []byte {
+	return []byte{gs, 76, byte(marginLeft % 256), byte(marginLeft / 256)}
+}
+
 func PrintRasterImage(img image.Image, incrementation int, startXPos, startYPos, endXPos, endYPos int) []byte {
 	datas := []byte{}
 	printWidth, printHeight, data := raster.PrintRasterImageProcess(img)
@@ -211,4 +223,30 @@ func PrintRasterImage(img image.Image, incrementation int, startXPos, startYPos,
 	}
 
 	return datas
+}
+
+func SetPageMode() []byte {
+	return []byte{esc, 76}
+}
+
+func SetStandardMode() []byte {
+	return []byte{esc, 83}
+}
+
+func SetPrintArea(startXPos, startYPos, endXPos, endYPos int) []byte {
+	return []byte{esc, 87, byte(startXPos / 256), byte(startYPos % 256), byte(startYPos / 256), byte(endXPos % 256), byte(endXPos / 256), byte(endYPos % 256), byte(endYPos / 256)}
+}
+
+func SetPrintDirection(direction uint8) []byte {
+	switch direction {
+	case 0, 1, 2, 3, 48, 49, 50, 51:
+		// ignore
+	default:
+		direction = 0
+	}
+	return []byte{gs, 84, direction}
+}
+
+func PrintPageModeBufferData() []byte {
+	return []byte{esc, 12}
 }

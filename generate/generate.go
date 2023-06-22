@@ -234,7 +234,7 @@ func SetStandardMode() []byte {
 }
 
 func SetPrintArea(startXPos, startYPos, endXPos, endYPos int) []byte {
-	return []byte{esc, 87, byte(startXPos / 256), byte(startYPos % 256), byte(startYPos / 256), byte(endXPos % 256), byte(endXPos / 256), byte(endYPos % 256), byte(endYPos / 256)}
+	return []byte{esc, 87, byte(startXPos % 256), byte(startXPos / 256), byte(startYPos % 256), byte(startYPos / 256), byte(endXPos % 256), byte(endXPos / 256), byte(endYPos % 256), byte(endYPos / 256)}
 }
 
 func SetPrintDirection(direction uint8) []byte {
